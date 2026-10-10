@@ -5,28 +5,31 @@
 const char eadk_app_name[] = "Devises";
 const int eadk_api_level = 0;
 const uint8_t eadk_app_icon[] = {
-  /* icone minimale 1x1 (remplacee plus tard) */
+  /* icone minimale vide (on mettra une vraie plus tard) */
   0x00
 };
 
 /* --- Programme principal --- */
-__attribute__((used, section(".text.main")))
 int main(void) {
+  /* Efface l'ecran en blanc (couleur 0xFFFF en RGB565) */
   eadk_display_push_rect_uniform(
     (eadk_rect_t){0, 0, 320, 240},
-    (eadk_color_t){0xFF, 0xFF, 0xFF}
+    0xFFFF
   );
 
+  /* Affiche "DEVISES" en haut a gauche, en noir sur blanc */
   eadk_display_draw_string(
     "DEVISES",
     (eadk_point_t){10, 10},
     true,
-    (eadk_color_t){0x00, 0x00, 0x00},
-    (eadk_color_t){0xFF, 0xFF, 0xFF}
+    0x0000,
+    0xFFFF
   );
 
+  /* Boucle infinie */
   while (1) {
-    eadk_sleep(100);
+    /* attend environ 100 ms (100000 microsecondes) */
+    eadk_delay_microseconds(100000);
   }
 
   return 0;
