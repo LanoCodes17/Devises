@@ -6,12 +6,19 @@ B = build
 
 all: $(B)/Devises.nwa
 
-$(B)/Devises.nwa: src/devises.c | $(B)
-	$(ARM_CC) -std=gnu11 $(EADK_CFLAGS) -Os -Wall \
-	  -nostartfiles --specs=nano.specs \
-	  -Wl,--relocatable -Wl,-e,main \
+$(B)/devises.o: src/devises.c | $(B)
+	$(ARM_CC) -std=gnu11 $(EADK_CFLAGS) -Os -Wall -ffunction-sections -fdata-sections \
+	  -c src/devises.c -o $@
+	@echo "=== Taille du .o ==="
+	@stat -c '%s bytes' $@
+	@echo "=== Symboles dans le .o ==="
+	@arm-none-eabi-nm $@ | head -20
+
+$(B)/Devises.nwa: $(B)/devises.o
+	$(ARM_CC) -nostartfiles --specs=nano.specs \
+	  -Wl,--relocatable -Wl,--gc-sections -Wl,-e,main \
 	  -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level \
-	  src/devises.c -lm -lgcc -o $@
+	  $< -lm -lgcc -o $@
 	arm-none-eabi-strip --strip-unneeded $@
 	@echo "=== Taille finale ==="
 	@stat -c '%s bytes' $@
