@@ -14,32 +14,32 @@ jobs:
       - name: Install ARM toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi
+          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Compile only (no link)
+      - name: Install nwlink
+        run: npm install -g nwlink@1.0.0
+
+      - name: Get EADK flags
         run: |
-          cd devises
-          mkdir -p build
-          arm-none-eabi-gcc -std=gnu11 $(npx --yes -- nwlink@1.0.0 eadk-cflags-device) -Os -Wall \
-            -c src/devises.c -o build/devises.o
-          echo "=== Taille du .o ==="
-          ls -la build/devises.o
-          echo "=== Symboles dans le .o ==="
-          arm-none-eabi-nm build/devises.o | head -30
+          echo "=== nwlink version ==="
+          nwlink --version || true
+          echo "=== eadk-cflags-device output ==="
+          nwlink eadk-cflags-device
+          echo "=== end ==="
 
-      - name: Link
-        run: make -C devises
+      - name: Build
+        run: make -C devises NWLINK="nwlink"
 
-      - name: Show final size
+      - name: Show size
         run: |
           ls -la devises/build/
-          echo "=== Symboles dans le .nwa ==="
-          arm-none-eabi-nm devises/build/Devises.nwa | head -30 || true
+          echo "=== Taille finale ==="
+          stat -c '%s bytes' devises/build/Devises.nwa
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
