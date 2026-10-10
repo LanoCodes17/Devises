@@ -11,12 +11,11 @@ $(B)/devises.o: src/devises.c | $(B)
 	  -c src/devises.c -o $@
 	@echo "=== Taille du .o ==="
 	@stat -c '%s bytes' $@
-	@echo "=== Symboles dans le .o ==="
-	@arm-none-eabi-nm $@ | head -20
 
 $(B)/Devises.nwa: $(B)/devises.o
 	$(ARM_CC) -nostartfiles --specs=nano.specs \
 	  -Wl,--relocatable -Wl,--gc-sections -Wl,-e,main \
+	  -Wl,--unresolved-symbols=ignore-all \
 	  -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level \
 	  $< -lm -lgcc -o $@
 	arm-none-eabi-strip --strip-unneeded $@
