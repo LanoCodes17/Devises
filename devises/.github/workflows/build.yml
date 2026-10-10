@@ -1,0 +1,32 @@
+name: Build Devises
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build
+        run: make -C devises
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Devises-nwa
+          path: devises/build/Devises.nwa
+          
