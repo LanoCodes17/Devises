@@ -1,4 +1,4 @@
-NWLINK ?= npx --yes -- nwlink@1.0.0
+NWLINK ?= nwlink
 ARM_CC = arm-none-eabi-gcc
 EADK_CFLAGS := $(shell $(NWLINK) eadk-cflags-device)
 
@@ -13,6 +13,8 @@ $(B)/Devises.nwa: src/devises.c | $(B)
 	  -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level \
 	  src/devises.c -lm -lgcc -o $@
 	arm-none-eabi-strip --strip-unneeded $@
+	@echo "=== Taille finale ==="
+	@stat -c '%s bytes' $@
 
 $(B):
 	mkdir -p $(B)
