@@ -1,11 +1,8 @@
 #include <eadk.h>
 
-/* --- Metadonnees de l'appli (sections OBLIGATOIRES pour NumWorks) --- */
+/* --- Metadonnees (l'icone vient du PNG, pas du code) --- */
 const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "Devises";
 const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level"))) = 0;
-const uint8_t eadk_app_icon[] __attribute__((section(".rodata.eadk_app_icon"))) = {
-  0x00
-};
 
 /* --- Programme principal --- */
 int main(void) {
