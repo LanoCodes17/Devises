@@ -21,11 +21,29 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Build
+      - name: Compile only (no link)
+        run: |
+          cd devises
+          mkdir -p build
+          arm-none-eabi-gcc -std=gnu11 $(npx --yes -- nwlink@1.0.0 eadk-cflags-device) -Os -Wall \
+            -c src/devises.c -o build/devises.o
+          echo "=== Taille du .o ==="
+          ls -la build/devises.o
+          echo "=== Symboles dans le .o ==="
+          arm-none-eabi-nm build/devises.o | head -30
+
+      - name: Link
         run: make -C devises
+
+      - name: Show final size
+        run: |
+          ls -la devises/build/
+          echo "=== Symboles dans le .nwa ==="
+          arm-none-eabi-nm devises/build/Devises.nwa | head -30 || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Devises-nwa
           path: devises/build/Devises.nwa
+      
