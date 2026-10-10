@@ -8,9 +8,8 @@ all: $(B)/Devises.nwa
 
 $(B)/Devises.nwa: src/devises.c | $(B)
 	$(ARM_CC) -std=gnu11 $(EADK_CFLAGS) -Os -Wall \
-	  -ffunction-sections -fdata-sections \
-	  -nostartfiles --specs=nano.specs -Wl,--relocatable -Wl,--gc-sections \
-	  -Wl,-e,main -Wl,-u,main \
+	  -nostartfiles --specs=nano.specs \
+	  -Wl,--relocatable -Wl,-e,main \
 	  -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level \
 	  src/devises.c -lm -lgcc -o $@
 	arm-none-eabi-strip --strip-unneeded $@
