@@ -19,8 +19,8 @@ $(B)/icon.o: ../icone.png | $(B)
 	@stat -c '%s bytes' $@
 
 $(B)/Devises.nwa: $(B)/devises.o $(B)/icon.o
-	$(ARM_CC) -Wl,--relocatable -nostartfiles --specs=nano.specs \
-	  -Wl,-e,main -Wl,--gc-sections \
+	$(ARM_CC) -Wl,--relocatable -nostartfiles \
+	  -Wl,-e,main \
 	  -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level \
 	  $(B)/devises.o $(B)/icon.o -o $@
 	@echo "=== Taille avant strip ==="
