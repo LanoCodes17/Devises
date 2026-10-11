@@ -6,24 +6,26 @@ const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))
 
 /* --- Convertit un float en texte (1 chiffre apres la virgule) --- */
 static void fmt1(float v, char *o) {
-  /* arrondi a 1 chiffre apres la virgule */
-  int total = (int)(v * 10.0f + 0.5f);   /* 108.5 -> 1085 */
-  int ip = total / 10;                    /* 108 */
-  int fp = total % 10;                    /* 5 */
+  int total = (int)(v * 10.0f + 0.5f);
+  int ip = total / 10;
+  int fp = total % 10;
   int n = 0;
   char t[12];
-  /* ecrit les chiffres de la partie entiere a l'envers */
   if (ip == 0) t[n++] = '0';
   while (ip > 0) {
     t[n++] = (char)('0' + ip % 10);
     ip /= 10;
   }
-  /* remet dans le bon ordre */
   while (n > 0) *o++ = t[--n];
-  /* virgule + decimale */
   *o++ = '.';
   *o++ = (char)('0' + fp);
   *o = 0;
+}
+
+/* --- Copie une chaine de caracteres (remplace memset) --- */
+static void copy_str(char *dst, const char *src) {
+  while (*src) *dst++ = *src++;
+  *dst = 0;
 }
 
 /* --- Programme principal --- */
@@ -48,8 +50,9 @@ int main(void) {
   float taux = 1.085f;
   float resultat = montant * taux;
 
-  /* affiche EUR 100.0 */
-  char ligne1[24] = "EUR ";
+  /* ligne EUR */
+  char ligne1[24];
+  copy_str(ligne1, "EUR ");
   fmt1(montant, ligne1 + 4);
   eadk_display_draw_string(
     ligne1,
@@ -59,8 +62,9 @@ int main(void) {
     0xFFFF
   );
 
-  /* affiche USD 108.5 */
-  char ligne2[24] = "USD ";
+  /* ligne USD */
+  char ligne2[24];
+  copy_str(ligne2, "USD ");
   fmt1(resultat, ligne2 + 4);
   eadk_display_draw_string(
     ligne2,
