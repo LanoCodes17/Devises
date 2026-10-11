@@ -27,7 +27,7 @@ $(B)/Devises.nwa: $(B)/devises.o $(B)/icon.o
 	@stat -c '%s bytes' $@
 	arm-none-eabi-strip --strip-unneeded $@
 	@echo "=== Taille finale ==="
-	@stat '%s bytes' $@
+    @stat -c '%s bytes' $@
 
 $(B):
 	mkdir -p $(B)
