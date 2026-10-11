@@ -7,7 +7,7 @@ B = build
 all: $(B)/Devises.nwa
 
 $(B)/devises.o: src/devises.c | $(B)
-	$(ARM_CC) -std=gnu11 $(EADK_CFLAGS) -Os -Wall \
+	$(ARM_CC) -std=gnu11 $(EADK_CFLAGS) -Os -Wall -fno-builtin \
 	  -fdata-sections -ffunction-sections \
 	  -c src/devises.c -o $@
 	@echo "=== Taille du .o ==="
@@ -27,7 +27,7 @@ $(B)/Devises.nwa: $(B)/devises.o $(B)/icon.o
 	@stat -c '%s bytes' $@
 	arm-none-eabi-strip --strip-unneeded $@
 	@echo "=== Taille finale ==="
-	@stat -c '%s bytes' $@
+	@stat '%s bytes' $@
 
 $(B):
 	mkdir -p $(B)
