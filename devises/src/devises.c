@@ -403,11 +403,15 @@ static int jp_play(void) {
 /* ============ SIMON ============ */
 #define SIMON_MAX 30
 static uint8_t simon_seq[SIMON_MAX];
-static int simon_len=0, simon_show_pos=0, simon_input_pos=0;
-static int simon_phase=0;   /* 0=affichage, 1=saisie, 2=gameover */
-static int simon_timer=0, simon_flash=-1, simon_round_score=0;
+static int simon_len = 0;
+static int simon_phase = 0;       /* 0=show, 1=input, 2=gameover */
+static int simon_show_pos = 0;
+static int simon_input_pos = 0;
+static int simon_flash = -1;
+static int simon_sub_state = 0;   /* 0=ON, 1=OFF, 2=WAIT */
+static int simon_sub_timer = 0;
+static int simon_input_flash_timer = 0;
 
-/* 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT */
 static const uint16_t simon_dim[4] = {
   RGB(0x80, 0x20, 0x20), RGB(0x20, 0x40, 0x80),
   RGB(0x20, 0x60, 0x30), RGB(0x80, 0x60, 0x20)
@@ -417,7 +421,6 @@ static const uint16_t simon_bright[4] = {
   RGB(0x50, 0xD0, 0x70), RGB(0xFF, 0xD0, 0x50)
 };
 
-/* zones : renvoie x,y,w,h pour un id 0..3 */
 static void simon_zone(int id, int *x, int *y, int *w, int *h) {
   if (id == 0) { *x=80; *y=50; *w=160; *h=55; }
   else if (id == 1) { *x=175; *y=115; *w=130; *h=60; }
@@ -428,7 +431,6 @@ static void simon_zone(int id, int *x, int *y, int *w, int *h) {
 static void simon_draw(void) {
   clear(0,0,320,240,C_BG);
   draw_status_bar("Simon");
-  /* score en haut */
   char sbuf[20]; int sn=0;
   const char *pref="Round : ";
   while (*pref) sbuf[sn++]=*pref++;
@@ -438,7 +440,6 @@ static void simon_draw(void) {
   int sw=txt_w(sbuf,7);
   eadk_display_draw_string(sbuf,(eadk_point_t){160-sw/2,22},false,C_TEXT,C_BG);
 
-  /* dessine les 4 zones */
   for (int i=0; i<4; i++) {
     int x,y,w,h;
     simon_zone(i,&x,&y,&w,&h);
@@ -448,7 +449,6 @@ static void simon_draw(void) {
     clear(x,y,2,h,C_WHITE); clear(x+w-2,y,2,h,C_WHITE);
   }
 
-  /* texte bas */
   const char *h;
   if (simon_phase==0) h="Regarde...";
   else if (simon_phase==1) h="A toi ! (fleches)";
@@ -457,7 +457,6 @@ static void simon_draw(void) {
   eadk_display_draw_string(h,(eadk_point_t){160-hw/2,225},false,C_GRAY,C_BG);
 }
 
-/* Convertit une touche en id de zone, -1 sinon */
 static int simon_key_to_id(uint64_t hit) {
   if ((hit >> KEY_UP) & 1) return 0;
   if ((hit >> KEY_RIGHT) & 1) return 1;
@@ -466,101 +465,113 @@ static int simon_key_to_id(uint64_t hit) {
   return -1;
 }
 
-static void simon_new_round(void) {
-  simon_seq[simon_len] = (uint8_t)(rng_next() % 4);
-  simon_len++;
+static void simon_start_round(void) {
   simon_show_pos = 0;
-  simon_input_pos = 0;
-  simon_timer = 0;
-  simon_flash = -1;
+  simon_sub_state = 0;
+  simon_sub_timer = 0;
+  simon_flash = simon_seq[0];
   simon_phase = 0;
+  simon_input_flash_timer = 0;
+}
+
+static void simon_add_to_seq(void) {
+  if (simon_len < SIMON_MAX) {
+    simon_seq[simon_len] = (uint8_t)(rng_next() % 4);
+    simon_len++;
+  }
 }
 
 static int simon_play(void) {
   simon_len = 0;
-  simon_phase = 0;
-  simon_flash = -1;
-  simon_new_round();
+  simon_add_to_seq();
+  simon_start_round();
   simon_draw();
 
   uint64_t prev = eadk_keyboard_scan();
   while (1) {
     uint64_t k = eadk_keyboard_scan();
     uint64_t hit = k & ~prev; prev = k;
-#define SHIT(key) ((hit >> (key)) & 1)
-    if (SHIT(KEY_HOME) || SHIT(KEY_ONOFF)) return 0;
+
+    if ((hit >> KEY_HOME) & 1) return 0;
+    if ((hit >> KEY_ONOFF) & 1) return 0;
 
     if (simon_phase == 0) {
-      /* animation : allume puis eteint chaque element */
-      simon_timer++;
-      if (simon_flash == -1) {
-        /* allume l'element courant */
-        if (simon_show_pos < simon_len) {
-          simon_flash = simon_seq[simon_show_pos];
+      simon_sub_timer++;
+      if (simon_sub_state == 0) {
+        /* ON - reste allume longtemps */
+        if (simon_sub_timer >= 400) {
+          simon_flash = -1;
           simon_draw();
+          simon_sub_state = 1;
+          simon_sub_timer = 0;
+        }
+      } else if (simon_sub_state == 1) {
+        /* OFF entre deux flashs */
+        if (simon_sub_timer >= 150) {
+          simon_show_pos++;
+          if (simon_show_pos >= simon_len) {
+            simon_sub_state = 2;
+            simon_sub_timer = 0;
+          } else {
+            simon_flash = simon_seq[simon_show_pos];
+            simon_draw();
+            simon_sub_state = 0;
+            simon_sub_timer = 0;
+          }
         }
       } else {
-        /* attend un peu avant d'eteindre */
-        if (simon_timer > 30) {
+        /* petite pause avant la saisie */
+        if (simon_sub_timer >= 200) {
+          simon_phase = 1;
+          simon_input_pos = 0;
           simon_flash = -1;
-          simon_timer = 0;
-          simon_show_pos++;
+          simon_input_flash_timer = 0;
           simon_draw();
-          if (simon_show_pos >= simon_len) {
-            /* fin de l'affichage : passe a la saisie */
-            simon_phase = 1;
-            simon_input_pos = 0;
-            simon_draw();
-          }
         }
       }
     } else if (simon_phase == 1) {
-      int id = simon_key_to_id(hit);
-      if (id >= 0) {
-        /* flash rapide */
-        simon_flash = id;
-        simon_draw();
-        /* verifie */
-        if (id == simon_seq[simon_input_pos]) {
-          simon_input_pos++;
-          if (simon_input_pos >= simon_len) {
-            /* round reussi */
-            simon_phase = 0;
-            simon_show_pos = 0;
-            simon_timer = 0;
-            simon_flash = -1;
-            simon_new_round();
-            simon_draw();
-          }
-        } else {
-          /* erreur */
-          simon_phase = 2;
+      /* gestion de l'extinction du flash d'input */
+      if (simon_input_flash_timer > 0) {
+        simon_input_flash_timer--;
+        if (simon_input_flash_timer == 0) {
           simon_flash = -1;
           simon_draw();
         }
       }
-      if (SHIT(KEY_BACK)) return 1;
+
+      int id = simon_key_to_id(hit);
+      if (id >= 0 && simon_input_flash_timer == 0) {
+        simon_flash = id;
+        simon_input_flash_timer = 30;
+        simon_draw();
+
+        if (id == simon_seq[simon_input_pos]) {
+          simon_input_pos++;
+          if (simon_input_pos >= simon_len) {
+            /* round reussi : ajoute un element et redemarre */
+            simon_add_to_seq();
+            simon_start_round();
+            simon_draw();
+          }
+        } else {
+          simon_phase = 2;
+          simon_flash = -1;
+          simon_input_flash_timer = 0;
+          simon_draw();
+        }
+      }
+      if ((hit >> KEY_BACK) & 1) return 1;
     } else {
-      /* gameover */
-      if (SHIT(KEY_BACK)) return 1;
-      if (SHIT(KEY_OK) || SHIT(KEY_EXE)) {
+      if ((hit >> KEY_BACK) & 1) return 1;
+      if (((hit >> KEY_OK) & 1) || ((hit >> KEY_EXE) & 1)) {
         simon_len = 0;
-        simon_phase = 0;
-        simon_flash = -1;
-        simon_new_round();
+        simon_add_to_seq();
+        simon_start_round();
         simon_draw();
       }
     }
 
-    /* reset flash si on est dans la phase 1 (saisie) */
-    if (simon_phase == 1 && simon_flash >= 0) {
-      /* attends un peu puis eteint */
-      static int flash_timer = 0;
-      flash_timer++;
-      if (flash_timer > 5) { simon_flash = -1; simon_draw(); flash_timer = 0; }
-    }
-
-    for (volatile int i=0;i<3000;i++) { }
+    for (volatile int i=0;i<5000;i++) { }
   }
 }
 
