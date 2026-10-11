@@ -13,7 +13,7 @@ $(B)/devises.o: src/devises.c | $(B)
 	@echo "=== Taille du .o ==="
 	@stat -c '%s bytes' $@
 
-$(B)/icon.o:icone.png | $(B)
+$(B)/icon.o: ../icone.png | $(B)
 	$(NWLINK) png-icon-o $< $@
 	@echo "=== Taille de l'icone ==="
 	@stat -c '%s bytes' $@
